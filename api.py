@@ -11,7 +11,11 @@ parser.add_argument(
     "--file", type=str, required=True, help="location of the url csv file"
 )
 parser.add_argument(
-    "--url_col", type=str, default='url', required=True, help="name of column containing misinformation urls"
+    "--url_col",
+    type=str,
+    default="url",
+    required=True,
+    help="name of column containing misinformation urls",
 )
 args = parser.parse_args()
 
@@ -49,7 +53,7 @@ def bearer_oauth(r):
     return r
 
 
-def get_misinfo_url_from_csv(file_name, target_col='url'):
+def get_misinfo_url_from_csv(file_name, target_col="url"):
     """
     :file_name: Name of the file containing misinformation urls (csv format)
     :target_col: Column name in the csv file which consists the urls (default='url')
@@ -59,18 +63,45 @@ def get_misinfo_url_from_csv(file_name, target_col='url'):
     return url_list
 
 
-def connect_to_endpoint(url, params):
+def search_recent_tweets(url, params):
+
     response = requests.get(url, auth=bearer_oauth, params=params)
     print(response.status_code)
     if response.status_code != 200:
         raise Exception(response.status_code, response.text)
-    return response.json()
+    json_response = response.json()
+
+    tweets = []
+
+    for i in range(json_response["meta"]["result_count"]):
+        if (
+            "referenced_tweets" not in json_response["data"][i]
+            and json_response["data"][i]["author_id"]
+            == json_response["includes"]["users"][i]["id"]
+        ):
+            tweets.append(
+                {
+                    "tweet_id": json_response["data"][i]["id"],
+                    "user_id": json_response["includes"]["users"][i]["id"],
+                    "username": json_response["includes"]["users"][i]["username"],
+                    "name": json_response["includes"]["users"][i]["name"],
+                    "created_at": json_response["data"][i]["created_at"],
+                }
+            )
+    tweets.sort(key=lambda x: x["created_at"])
+
+    with open("data.json", "a", encoding="utf-8") as f:
+        if len(tweets) != 0:
+            json.dump(tweets, fp=f, indent=4, sort_keys=True)
+            f.write("\n")
+            print("tweets written to file")
+
+    return tweets
 
 
 def get_followers(url, user_id, params):
 
-    response = requests.get(url.format(id=user_id),
-                            auth=bearer_oauth, params=params)
+    response = requests.get(url.format(id=user_id), auth=bearer_oauth, params=params)
     if response.status_code != 200:
         raise Exception(response.status_code, response.text)
     json_response = response.json()
@@ -80,16 +111,16 @@ def get_followers(url, user_id, params):
 
     for i in range(no_of_followers):
         followers.append(json_response["data"][i]["id"])
-    with open("followers.json", "w", encoding="utf-8") as f:
+    with open("followers.json", "a", encoding="utf-8") as f:
         json.dump(json_response, fp=f, indent=4, sort_keys=True)
+        f.write("\n")
 
     return no_of_followers, followers
 
 
 def get_recent_tweets(url, user_id, params):
 
-    response = requests.get(url.format(id=user_id),
-                            auth=bearer_oauth, params=params)
+    response = requests.get(url.format(id=user_id), auth=bearer_oauth, params=params)
     if response.status_code != 200:
         raise Exception(response.status_code, response.text)
     json_response = response.json()
@@ -99,8 +130,9 @@ def get_recent_tweets(url, user_id, params):
 
     for i in range(no_of_tweets):
         tweets.append(json_response["data"][i]["text"])
-    with open("recent_tweets.json", "w", encoding="utf-8") as f:
+    with open("recent_tweets.json", "a", encoding="utf-8") as f:
         json.dump(json_response, fp=f, indent=4, sort_keys=True)
+        f.write("\n")
 
     return no_of_tweets, tweets
 
@@ -111,39 +143,24 @@ def main():
         raise ValueError(f"No urls found in the mentioned column")
 
     for url in url_list:
+
         query_params["query"] = f"(url:{url})"
-        json_response = connect_to_endpoint(search_url, query_params)
-        tweets = []
-        for i in range(json_response["meta"]["result_count"]):
-            if (
-                "referenced_tweets" not in json_response["data"][i]
-                and json_response["data"][i]["author_id"]
-                == json_response["includes"]["users"][i]["id"]
-            ):
-                tweets.append(
-                    {
-                        "tweet_id": json_response["data"][i]["id"],
-                        "user_id": json_response["includes"]["users"][i]["id"],
-                        "username": json_response["includes"]["users"][i]["username"],
-                        "name": json_response["includes"]["users"][i]["name"],
-                        "created_at": json_response["data"][i]["created_at"]
-                    }
-                )
-        tweets.sort(key=lambda x: x['created_at'])
-        print(tweets)
-        with open("data.json", "w", encoding="utf-8") as f:
-            json.dump(json_response, fp=f, indent=4, sort_keys=True)
-        # print(json.dumps(json_response, indent=4, sort_keys=True))
+        tweets = search_recent_tweets(search_url, query_params)
+        print(f"{url} tweets: {len(tweets)}")
 
-        # max_results = 100 in followers_params so at max 100 followers will be returned
-        no_of_followers, followers = get_followers(
-            followers_url, tweets[0]["user_id"], followers_params)
-        print(no_of_followers, followers)
+        for tweet in tweets:
 
-        # max_results = 100 in recent_tweets_params so at max 100 followers will be returned
-        no_of_tweets, tweets = get_recent_tweets(
-            recent_tweets_url, tweets[0]["user_id"], recent_tweets_params)
-        print(no_of_tweets, tweets)
+            # max_results = 100 in followers_params so at max 100 followers will be returned
+            no_of_followers, followers = get_followers(
+                followers_url, tweet["user_id"], followers_params
+            )
+            print(no_of_followers)
+
+            # max_results = 100 in recent_tweets_params so at max 100 followers will be returned
+            no_of_tweets, tweets = get_recent_tweets(
+                recent_tweets_url, tweets[0]["user_id"], recent_tweets_params
+            )
+            print(no_of_tweets)
 
 
 if __name__ == "__main__":
