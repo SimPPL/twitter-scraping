@@ -13,6 +13,10 @@ data.json
 followers.json
 recent_tweets.json
 
+# Personal files
+test.py
+.DS_Store
+
 # C extensions
 *.so
 
