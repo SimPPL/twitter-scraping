@@ -150,14 +150,14 @@ def control_rate_limit(response_headers):
     reset_time = dt.fromtimestamp(int(response_headers['X-Rate-Limit-Reset']))
     time_now = dt.now()
     time_remaining = (reset_time - time_now).total_seconds()
+    if time_remaining >= 0:
+        if requests_remaining == 0:
+            print(f"Rate Limit Reached. Sleeping for {time_remaining}")
+            time.sleep(time_remaining)
 
-    if requests_remaining == 0 and time_remaining > 0:
-        print(f"Rate Limit Reached. Sleeping for {time_remaining}")
-        time.sleep(time_remaining)
-
-    elif requests_remaining <= 5 and time_remaining < 30:
-        print(f"Rate Limit Nearing. Sleeping for {time_remaining}")
-        time.sleep(time_remaining)
+        elif requests_remaining <= 5 and time_remaining < 30:
+            print(f"Rate Limit Nearing. Sleeping for {time_remaining}")
+            time.sleep(time_remaining)
 
 
 def main():
