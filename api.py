@@ -26,14 +26,14 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-search_url = "https://api.twitter.com/2/tweets/search/recent"
+search_url = "https://api.twitter.com/2/tweets/search/all"
 followers_url = "https://api.twitter.com/2/users/{id}/followers"
 recent_tweets_url = "https://api.twitter.com/2/users/{id}/tweets"
 
 # Optional params: start_time,end_time,since_id,until_id,max_results,next_token,
 # expansions,tweet.fields,media.fields,poll.fields,place.fields,user.fields
 query_params = {
-    "query": "(url:youtube.com)",
+    "query": "(from:TwitterDev url:youtube.com)",
     "expansions": "author_id",
     "tweet.fields": "referenced_tweets,created_at",
 }
@@ -67,7 +67,7 @@ def get_misinfo_url_from_csv(file_name, target_col="url"):
     """
     df = pd.read_csv(file_name)
     url_list = list(df[target_col].unique())
-    return url_list[65:200]
+    return url_list
 
 
 def search_recent_tweets(url, params, tweet_number):
@@ -196,10 +196,15 @@ def get_recent_tweets(url, user_id, params):
 
 def control_rate_limit(response_headers):
 
+    print("Controlling Rate Limit")
+
     requests_remaining = int(response_headers["X-Rate-Limit-Remaining"])
     reset_time = dt.fromtimestamp(int(response_headers["X-Rate-Limit-Reset"]))
     time_now = dt.now()
     time_remaining = (reset_time - time_now).total_seconds()
+
+    print("requests remaining: ", requests_remaining)
+    print("time remaining: ", time_remaining)
 
     if time_remaining >= 0:
         if requests_remaining == 0:
@@ -225,7 +230,9 @@ def main():
 
         print(f"\n \n ========= {url} ========= \n \n")
 
-        query_params["query"] = f"(url:{url})"
+        time.sleep(1.1)     # To avoid rate limit for academic api
+
+        query_params["query"] = f"(from:TwitterDev url:{url})"
         tweets, response_header_recent = search_recent_tweets(
             search_url, query_params, idx
         )
