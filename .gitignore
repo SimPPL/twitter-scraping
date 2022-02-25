@@ -15,6 +15,7 @@ recent_tweets.json
 
 # Personal files
 test.py
+new.csv
 .DS_Store
 
 # C extensions

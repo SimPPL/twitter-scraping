@@ -5,7 +5,11 @@ import argparse
 import pandas as pd
 import time
 from datetime import datetime as dt
-from config import BEARER_TOKEN
+from dotenv import dotenv_values
+
+# Load Bearer Token
+config = dotenv_values(".env")
+BEARER_TOKEN = config['BEARER_TOKEN']
 
 # Load file address of misinformation csv file
 parser = argparse.ArgumentParser(description="simppl misinformation urls")
@@ -127,9 +131,11 @@ def search_recent_tweets(url, params, tweet_number):
 
 def get_followers(url, user_id, params):
 
-    response = requests.get(url.format(id=user_id), auth=bearer_oauth, params=params)
+    response = requests.get(url.format(id=user_id),
+                            auth=bearer_oauth, params=params)
     if response.status_code != 200:
-        raise Exception("request status: ", response.status_code, response.text)
+        raise Exception("request status: ",
+                        response.status_code, response.text)
     json_response = response.json()
 
     no_of_followers = json_response["meta"]["result_count"]
@@ -160,9 +166,11 @@ def get_followers(url, user_id, params):
 
 def get_recent_tweets(url, user_id, params):
 
-    response = requests.get(url.format(id=user_id), auth=bearer_oauth, params=params)
+    response = requests.get(url.format(id=user_id),
+                            auth=bearer_oauth, params=params)
     if response.status_code != 200:
-        raise Exception("request status: ", response.status_code, response.text)
+        raise Exception("request status: ",
+                        response.status_code, response.text)
     json_response = response.json()
 
     no_of_tweets = 0

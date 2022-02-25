@@ -12,4 +12,4 @@ mkdir followers
 
 mkdir follower_tweets
 
-python api.py --file "all_urls.csv" --url_col "urls" 
+python api.py --file "new.csv" --url_col "urls"
