@@ -20,8 +20,9 @@ parser.add_argument(
     help="name of column containing misinformation urls",
 )
 
-parser.add_argument("--output", type='str', default=".",
-                    help="Destination of output json files")
+parser.add_argument(
+    "--output", type=str, default=".", help="Destination of output json files"
+)
 
 args = parser.parse_args()
 
@@ -39,12 +40,12 @@ query_params = {
 
 followers_params = {
     "user.fields": "id,name,username",
-    "max_results": 100,
+    "max_results": 5,
 }
 
 recent_tweets_params = {
     "user.fields": "id,name,username",
-    "max_results": 100,
+    "max_results": 5,
     "tweet.fields": "referenced_tweets,created_at",
 }
 
@@ -66,90 +67,140 @@ def get_misinfo_url_from_csv(file_name, target_col="url"):
     """
     df = pd.read_csv(file_name)
     url_list = list(df[target_col].unique())
-    return url_list
+    return url_list[65:200]
 
 
-def search_recent_tweets(url, params):
+def search_recent_tweets(url, params, tweet_number):
 
     response = requests.get(url, auth=bearer_oauth, params=params)
-    print(response.status_code)
+    print("request status: ", response.status_code)
     if response.status_code != 200:
         raise Exception(response.status_code, response.text)
     json_response = response.json()
 
     tweets = []
 
-    for i in range(json_response["meta"]["result_count"]):
-        if (
-            "referenced_tweets" not in json_response["data"][i]
-            and json_response["data"][i]["author_id"]
-            == json_response["includes"]["users"][i]["id"]
-        ):
-            tweets.append(
-                {
-                    "tweet_id": json_response["data"][i]["id"],
-                    "user_id": json_response["includes"]["users"][i]["id"],
-                    "username": json_response["includes"]["users"][i]["username"],
-                    "name": json_response["includes"]["users"][i]["name"],
-                    "created_at": json_response["data"][i]["created_at"],
-                }
-            )
-    tweets.sort(key=lambda x: x["created_at"])
+    try:
+        no_of_tweets = (
+            json_response["meta"]["result_count"]
+            if json_response["meta"]["result_count"]
+            < len(json_response["includes"]["users"])
+            else len(json_response["includes"]["users"])
+        )
+    except KeyError:
+        no_of_tweets = 0
 
-    with open(f"{args.output}/data.json", "a", encoding="utf-8") as f:
-        if len(tweets) != 0:
-            json.dump(tweets, fp=f, indent=4, sort_keys=True)
-            f.write("\n")
-            print("tweets written to file")
+    if no_of_tweets > 0:
+        for i in range(no_of_tweets):
+            if (
+                "referenced_tweets" not in json_response["data"][i]
+                and json_response["data"][i]["author_id"]
+                == json_response["includes"]["users"][i]["id"]
+            ):
+                tweets.append(
+                    {
+                        "tweet_id": json_response["data"][i]["id"],
+                        "user_id": json_response["includes"]["users"][i]["id"],
+                        "username": json_response["includes"]["users"][i]["username"],
+                        "name": json_response["includes"]["users"][i]["name"],
+                        "created_at": json_response["data"][i]["created_at"],
+                    }
+                )
+        # tweets.sort(key=lambda x: x["created_at"])
+
+        cmd = "touch " + f"./tweets/{tweet_number}_tweets.json"
+        os.popen(cmd)
+
+        with open(
+            f"{args.output}/tweets/{tweet_number}_tweets.json", "a", encoding="utf-8"
+        ) as f:
+            if no_of_tweets != 0:
+                json.dump(tweets, fp=f, indent=4, sort_keys=True)
+                f.write("\n")
+                print(
+                    f"All {no_of_tweets} tweets for {url} are written in: ",
+                    f"{args.output}/tweets/{url}_tweets.json",
+                )
 
     return tweets, response.headers
 
 
 def get_followers(url, user_id, params):
 
-    response = requests.get(url.format(id=user_id),
-                            auth=bearer_oauth, params=params)
+    response = requests.get(url.format(id=user_id), auth=bearer_oauth, params=params)
     if response.status_code != 200:
-        raise Exception(response.status_code, response.text)
+        raise Exception("request status: ", response.status_code, response.text)
     json_response = response.json()
 
     no_of_followers = json_response["meta"]["result_count"]
     followers = []
 
     for i in range(no_of_followers):
-        followers.append(json_response["data"][i]["id"])
-    with open(f"{args.output}/followers.json", "a", encoding="utf-8") as f:
-        json.dump(json_response, fp=f, indent=4, sort_keys=True)
-        f.write("\n")
+        followers.append(
+            {
+                "id": json_response["data"][i]["id"],
+                "username": json_response["data"][i]["username"],
+            }
+        )
 
+    cmd = "touch " + f"./followers/{user_id}_followers.json"
+    os.popen(cmd)
+
+    with open(
+        f"{args.output}/followers/{user_id}_followers.json", "a", encoding="utf-8"
+    ) as f:
+        json.dump(followers, fp=f, indent=4, sort_keys=True)
+        f.write("\n")
+        print(
+            f"All {no_of_followers} followers for {user_id} are written in: ",
+            f"{args.output}/followers/{user_id}_followers.json",
+        )
     return no_of_followers, followers, response.headers
 
 
 def get_recent_tweets(url, user_id, params):
 
-    response = requests.get(url.format(id=user_id),
-                            auth=bearer_oauth, params=params)
+    response = requests.get(url.format(id=user_id), auth=bearer_oauth, params=params)
     if response.status_code != 200:
-        raise Exception(response.status_code, response.text)
+        raise Exception("request status: ", response.status_code, response.text)
     json_response = response.json()
 
-    no_of_tweets = json_response["meta"]["result_count"]
+    no_of_tweets = 0
     tweets = []
 
+    try:
+        no_of_tweets = json_response["meta"]["result_count"]
+    except KeyError:
+        no_of_tweets = 0
+
     for i in range(no_of_tweets):
-        tweets.append(json_response["data"][i]["text"])
-    with open(f"{args.output}/recent_tweets.json", "a", encoding="utf-8") as f:
-        json.dump(json_response, fp=f, indent=4, sort_keys=True)
+        tweets.append({"text": json_response["data"][i]["text"]})
+
+    cmd = "touch " + f"./follower_tweets/{user_id}_follower_tweets.json"
+    os.popen(cmd)
+
+    with open(
+        f"{args.output}/follower_tweets/{user_id}_follower_tweets.json",
+        "a",
+        encoding="utf-8",
+    ) as f:
+        json.dump(tweets, fp=f, indent=4, sort_keys=True)
         f.write("\n")
+        print(
+            f"All {no_of_tweets} tweets for {user_id} are written in: ",
+            f"{args.output}/follower_tweets/{user_id}_follower_tweets.json",
+        )
 
     return no_of_tweets, tweets, response.headers
 
 
 def control_rate_limit(response_headers):
-    requests_remaining = int(response_headers['X-Rate-Limit-Remaining'])
-    reset_time = dt.fromtimestamp(int(response_headers['X-Rate-Limit-Reset']))
+
+    requests_remaining = int(response_headers["X-Rate-Limit-Remaining"])
+    reset_time = dt.fromtimestamp(int(response_headers["X-Rate-Limit-Reset"]))
     time_now = dt.now()
     time_remaining = (reset_time - time_now).total_seconds()
+
     if time_remaining >= 0:
         if requests_remaining == 0:
             print(f"Rate Limit Reached. Sleeping for {time_remaining}")
@@ -161,37 +212,58 @@ def control_rate_limit(response_headers):
 
 
 def main():
+
     url_list = get_misinfo_url_from_csv(args.file, args.url_col)
+
     if len(url_list) == 0:
         raise ValueError(f"No urls found in the mentioned column")
-    flag = 0                # To know when to start controlling rate limit
-    flag_t = 0              # To know when to start controlling rate limit
-    for url in url_list:
-        if flag != 0:
-            control_rate_limit(response_header_recent)
+
+    flag = 0  # To know when to start controlling rate limit
+    flag_t = 0  # To know when to start controlling rate limit
+
+    for idx, url in enumerate(url_list):
+
+        print(f"\n \n ========= {url} ========= \n \n")
+
         query_params["query"] = f"(url:{url})"
         tweets, response_header_recent = search_recent_tweets(
-            search_url, query_params)
-        print(f"{url} tweets: {len(tweets)}")
-        flag = 1                    # To start rate limit check from next iteration
+            search_url, query_params, idx
+        )
+
+        if flag != 0:
+            control_rate_limit(response_header_recent)
+
+        flag = 1  # To start rate limit check from next iteration
 
         for tweet in tweets:
-            if flag_t != 0:
-                control_rate_limit(response_header_followers)
+
+            username = tweet["username"]
+            user_id = tweet["user_id"]
+
+            print(f"This url was tweeted by {username}: {user_id}")
+
             # max_results = 100 in followers_params so at max 100 followers will be returned
             no_of_followers, followers, response_header_followers = get_followers(
-                followers_url, tweet["user_id"], followers_params
+                followers_url, user_id, followers_params
             )
-            print(no_of_followers)
+            print(f"This user has {no_of_followers} followers ... \n")
 
             if flag_t != 0:
-                control_rate_limit(response_header_tweets)
-            # max_results = 100 in recent_tweets_params so at max 100 followers will be returned
-            no_of_tweets, tweets, response_header_tweets = get_recent_tweets(
-                recent_tweets_url, tweets[0]["user_id"], recent_tweets_params
-            )
-            print(no_of_tweets)
-            flag_t = 1
+                control_rate_limit(response_header_followers)
+
+            for follower in followers:
+
+                follower_id = follower["id"]
+                # max_results = 100 in recent_tweets_params so at max 100 followers will be returned
+                no_of_tweets, tweets, response_header_tweets = get_recent_tweets(
+                    recent_tweets_url, follower_id, recent_tweets_params
+                )
+                print(f"{no_of_tweets} tweets found for this user ... \n")
+
+                if flag_t != 0:
+                    control_rate_limit(response_header_tweets)
+
+                flag_t = 1
 
 
 if __name__ == "__main__":
