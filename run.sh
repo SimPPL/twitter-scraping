@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# conda create --name simppl
+conda create --name simppl
 
-# source activate simppl
+source activate simppl
 
-# pip install -r requirements.txt
+pip install -r requirements.txt
 
 mkdir tweets
 
