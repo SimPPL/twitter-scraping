@@ -37,7 +37,7 @@ recent_tweets_url = "https://api.twitter.com/2/users/{id}/tweets"
 # Optional params: start_time,end_time,since_id,until_id,max_results,next_token,
 # expansions,tweet.fields,media.fields,poll.fields,place.fields,user.fields
 query_params = {
-    "query": "(from:TwitterDev url:youtube.com)",
+    "query": "(url:youtube.com)",
     "expansions": "author_id",
     "tweet.fields": "referenced_tweets,created_at",
 }
@@ -240,7 +240,7 @@ def main():
 
         time.sleep(1.1)     # To avoid rate limit for academic api
 
-        query_params["query"] = f"(from:TwitterDev url:{url})"
+        query_params["query"] = f"(url:{url})"
         tweets, response_header_recent = search_recent_tweets(
             search_url, query_params, idx
         )
