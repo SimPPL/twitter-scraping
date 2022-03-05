@@ -12,6 +12,9 @@ __pycache__/
 data.json
 followers.json
 recent_tweets.json
+follower_tweets/
+followers/
+tweets/
 
 # Personal files
 test.py

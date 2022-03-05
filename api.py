@@ -239,7 +239,12 @@ def main():
         print(f"\n \n ========= {url} ========= \n \n")
 
         time.sleep(1.1)     # To avoid rate limit for academic api
-
+        # Extract Twitter ID to retrieve Quoted Tweets
+        if 'twitter.com' in url and '/status/' in url:
+            l = url.split('/')
+            idx_t = l.index('status')
+            if len(l) >= idx_t:
+                url = url[idx_t+1].split('?')[0]
         query_params["query"] = f"(url:{url})"
         tweets, response_header_recent = search_recent_tweets(
             search_url, query_params, idx
