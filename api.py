@@ -237,7 +237,7 @@ def main():
 
     for idx, url in enumerate(url_list):
         # currently considering facebook urls to have unnecessary query parameters
-        if("facebook") in url:
+        if ("facebook" in url) and ('?' in url) :
             base = url.split('?')[0] + '?'
             query_lst = url.split('?')[1].split('&')
             allowed_query_lst = []
