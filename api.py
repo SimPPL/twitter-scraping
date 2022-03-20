@@ -239,12 +239,12 @@ def main():
         # currently considering facebook urls to have unnecessary query parameters
         if("facebook") in url:
             base = url.split('?')[0] + '?'
-            after_lst = url.split('?')[1].split('&')
-            allowed_after_lst = []
-            for after in after_lst:
-                if(after.split('=')[0] in allowed_query_params_lst):
-                    allowed_after_lst.append(after)
-            url = base + '&'.join(allowed_after_lst)
+            query_lst = url.split('?')[1].split('&')
+            allowed_query_lst = []
+            for query in query_lst:
+                if(query.split('=')[0] in allowed_query_params_lst):
+                    allowed_query_lst.append(query)
+            url = base + '&'.join(allowed_query_lst)
 
         print(f"\n \n ========= {url} ========= \n \n")
 
