@@ -233,7 +233,7 @@ def main():
 
     flag = 0  # To know when to start controlling rate limit
     flag_t = 0  # To know when to start controlling rate limit
-    allowed_query_params_lst = ["fbid"] # fbid is the only query parameter which is allowed
+    allowed_query_params_lst = ["fbid"] # fbid is the only query parameter which is required for facebook urls
 
     for idx, url in enumerate(url_list):
         # currently considering facebook urls to have unnecessary query parameters
