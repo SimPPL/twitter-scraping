@@ -233,7 +233,8 @@ def main():
 
     flag = 0  # To know when to start controlling rate limit
     flag_t = 0  # To know when to start controlling rate limit
-    allowed_query_params_lst = ["fbid"] # fbid is the only query parameter which is required for facebook urls
+    allowed_query_params_lst = ["fbid", "v", "story_fbid", "id"] # query parameters required for facebook urls
+    unnecessary_query_params_lst = ['fbclid', 'utm_source', 'via', 'ref', 's', 'type', 'set', 'ifg', 'start', 't']
 
     for idx, url in enumerate(url_list):
         # currently considering facebook urls to have unnecessary query parameters
@@ -243,6 +244,16 @@ def main():
             allowed_query_lst = []
             for query in query_lst:
                 if(query.split('=')[0] in allowed_query_params_lst):
+                    allowed_query_lst.append(query)
+            url = base + '&'.join(allowed_query_lst)
+        
+        # remove unnecessary query params from non-facebook urls
+        elif ('?' in url):
+            base = url.split('?')[0] + '?'
+            query_lst = url.split('?')[1].split('&')
+            allowed_query_lst = []
+            for query in query_lst:
+                if (query.split('=')[0] not in unnecessary_query_params_lst) and ('__' not in query.split('=')[0]):
                     allowed_query_lst.append(query)
             url = base + '&'.join(allowed_query_lst)
 
